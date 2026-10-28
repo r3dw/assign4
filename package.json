@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test src/lib/versions.test.ts"
+    "test": "node --test src/lib/*.test.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.22",
