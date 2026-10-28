@@ -46,7 +46,10 @@ Pushing to `main` deploys to Vercel once the repo is connected. Add the environm
 
 ## Roadmap
 
-- [ ] Scaffold Next.js app
+- [x] Scaffold Next.js app
+- [x] Port the version data layer from assign3 (`/api/versions`)
+- [ ] Port the assign3 front end
+- [ ] Restore HomePod Software and move beta/RC tracking into the database import (dropped from the first port)
 - [ ] Add Clerk authentication
 - [ ] Set up Supabase database
 - [ ] Integrate external API
