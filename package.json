@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test src/lib/*.test.ts"
+    "test": "node --test \"src/**/*.test.ts\"",
+    "import": "node --env-file=.env.local scripts/import.ts",
+    "import:dry": "node scripts/import.ts --dry-run"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.22",
