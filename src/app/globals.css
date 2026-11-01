@@ -271,6 +271,21 @@ button.primary {
   box-shadow: var(--shadow), inset 0 1px 0 var(--glass-hi);
 }
 .icon-btn svg { width: 1.45rem; height: 1.45rem; }
+/* Sign in: a text pill with the same glass look and height as the round icon buttons. */
+.signin-btn {
+  height: 2.9rem;
+  padding: 0 1.1rem;
+  border-radius: 1.45rem;
+  font-weight: 600;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--glass-hi);
+}
+.user-slot { display: flex; align-items: center; height: 2.9rem; }
+@media (prefers-reduced-transparency: reduce) {
+  .signin-btn { background: var(--ctl); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
 .icon-btn[aria-expanded="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 @media (prefers-reduced-transparency: reduce) {
   .icon-btn { background: var(--ctl); -webkit-backdrop-filter: none; backdrop-filter: none; }

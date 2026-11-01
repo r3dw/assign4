@@ -1,5 +1,6 @@
 "use client";
 
+import { Show, SignInButton, UserButton } from "@clerk/nextjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { detect, evaluate, type DeviceInfo } from "@/lib/device";
 import { badgeEntries, formatDateTime, newness, previewDate } from "@/lib/format";
@@ -262,6 +263,19 @@ export function VersionsApp() {
           </p>
 
           <div className="toolbar">
+            <Show when="signed-out">
+              <SignInButton mode="modal">
+                <button type="button" className="signin-btn" data-tip="Sign in or create an account with your email address, to save your devices.">
+                  Sign in
+                </button>
+              </SignInButton>
+            </Show>
+            <Show when="signed-in">
+              <div className="user-slot">
+                <UserButton />
+              </div>
+            </Show>
+
             <button
               type="button"
               id="refresh"
