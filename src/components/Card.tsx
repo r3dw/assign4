@@ -9,6 +9,7 @@ import {
   visibleCycles,
 } from "@/lib/format";
 import type { Beta, FamilyResult } from "@/lib/versions";
+import type { DevicesTarget } from "./DevicesDialog";
 import { Icon } from "./Icon";
 
 interface BadgeContext {
@@ -47,12 +48,16 @@ export function Card({
   older,
   showBeta,
   ctx,
+  onShowDevices,
 }: {
   family: FamilyResult;
   older: boolean;
   showBeta: boolean;
   ctx: BadgeContext;
+  onShowDevices: (target: DevicesTarget) => void;
 }) {
+  const show = (cycle: string) =>
+    onShowDevices({ family: family.name, major: Number(cycle), label: `${osName(family.name)} ${cycle}` });
   const [latest, ...others] = visibleCycles(family, older);
   const hb = headBeta(family, latest);
 
@@ -69,6 +74,15 @@ export function Card({
         <NewBadge itemKey={cycleKey(family.name, latest.version)} date={latest.date} ctx={ctx} />
       </p>
       <p className="meta">{latest.date ? `Released ${formatDate(latest.date)}` : "Release date not available"}</p>
+      <button
+        type="button"
+        className="link-btn devices-btn"
+        onClick={() => show(latest.cycle)}
+        data-tip={`See which devices can run ${osName(family.name)} ${latest.cycle}.`}
+      >
+        Supported devices
+        <span className="visually-hidden"> for {osName(family.name)} {latest.cycle}</span>
+      </button>
 
       {showBeta && hb && (
         <p className="beta-line">
@@ -91,7 +105,17 @@ export function Card({
               const label = `${osName(family.name)} ${c.cycle}`;
               const rows = [
                 <tr key={c.cycle} className={c.supported ? undefined : "older"}>
-                  <th scope="row">{c.supported ? label : `${label} (older)`}</th>
+                  <th scope="row">
+                    <button
+                      type="button"
+                      className="link-btn"
+                      onClick={() => show(c.cycle)}
+                      data-tip={`See which devices can run ${label}.`}
+                    >
+                      {c.supported ? label : `${label} (older)`}
+                      <span className="visually-hidden">: supported devices</span>
+                    </button>
+                  </th>
                   <td className="num">
                     {c.version}
                     <NewBadge itemKey={cycleKey(family.name, c.version)} date={c.date} ctx={ctx} />

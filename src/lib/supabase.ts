@@ -5,6 +5,17 @@ import { createClient } from "@supabase/supabase-js";
 const url = () => process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
 /**
+ * Supabase client for public, read-only reference data (OS versions, devices). It uses
+ * the anon key and no user token, so it behaves the same for everyone and its results
+ * can be cached.
+ */
+export function createPublicClient() {
+  return createClient(url(), process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+/**
  * Supabase client acting as the signed-in user. Clerk's session token is sent with
  * each request, so row-level security sees the user's Clerk id and only returns
  * their own rows. For signed-out visitors it acts as an anonymous user, which can

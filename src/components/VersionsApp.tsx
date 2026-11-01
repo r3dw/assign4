@@ -7,6 +7,7 @@ import { badgeEntries, formatDateTime, newness, previewDate } from "@/lib/format
 import { load, save, SIZES, useSettings, type Theme } from "@/lib/useSettings";
 import type { Payload } from "@/lib/versions";
 import { Card } from "./Card";
+import { DevicesDialog, type DevicesTarget } from "./DevicesDialog";
 import { Icon } from "./Icon";
 import { Tour } from "./Tour";
 import { useTooltip } from "./Tooltip";
@@ -63,6 +64,7 @@ export function VersionsApp() {
   const [showTitle, setShowTitle] = useState(false);
   const [lift, setLift] = useState(false);
   const [tourActive, setTourActive] = useState(false);
+  const [devicesTarget, setDevicesTarget] = useState<DevicesTarget | null>(null);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
@@ -438,7 +440,7 @@ export function VersionsApp() {
 
         <section id="results" className="results" aria-label="Apple OS versions" tabIndex={-1}>
           {data?.families.map((f) => (
-            <Card key={f.name} family={f} older={older} showBeta={beta} ctx={ctx} />
+            <Card key={f.name} family={f} older={older} showBeta={beta} ctx={ctx} onShowDevices={setDevicesTarget} />
           ))}
         </section>
 
@@ -458,6 +460,8 @@ export function VersionsApp() {
           affiliated with Apple. The device check runs in your browser; nothing about your device is sent anywhere.
         </p>
       </footer>
+
+      <DevicesDialog target={devicesTarget} onClose={() => setDevicesTarget(null)} />
 
       {tip.bubble}
 
