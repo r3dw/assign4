@@ -28,9 +28,16 @@ async function getJson(url: string): Promise<unknown> {
   return res.json();
 }
 
-/** endoflife.date: codename, release date and end-of-support date per major version. */
-async function fetchEol(log: Log): Promise<Partial<Record<DbFamily, Record<number, EolInfo>>>> {
-  const out: Partial<Record<DbFamily, Record<number, EolInfo>>> = {};
+interface EolData {
+  info: Partial<Record<DbFamily, Record<number, EolInfo>>>;
+  /** The newest release of each major version, as endoflife.date reports it. */
+  latest: { family: DbFamily; version: string; date: string | null }[];
+}
+
+/** endoflife.date: codename, release date, end-of-support date and latest release per major version. */
+async function fetchEol(log: Log): Promise<EolData> {
+  const out: EolData["info"] = {};
+  const latest: EolData["latest"] = [];
   for (const [slug, family] of Object.entries(EOL_FAMILIES)) {
     try {
       const entries = (await getJson(`https://endoflife.date/api/${slug}.json`)) as Record<string, unknown>[];
@@ -43,13 +50,16 @@ async function fetchEol(log: Log): Promise<Partial<Record<DbFamily, Record<numbe
           endOfSupport: isoDate(e.eol),
           codename: typeof e.codename === "string" ? e.codename : null,
         };
+        if (typeof e.latest === "string") {
+          latest.push({ family: family as DbFamily, version: e.latest, date: isoDate(e.latestReleaseDate) });
+        }
       }
       out[family as DbFamily] = byMajor;
     } catch (err) {
       log(`endoflife.date ${slug}: skipped (${err instanceof Error ? err.message : err})`);
     }
   }
-  return out;
+  return { info: out, latest };
 }
 
 /** Download everything and work out what the database should contain. Writes nothing. */
@@ -78,7 +88,8 @@ export async function collectPlan(log: Log): Promise<Plan> {
   }
 
   const eol = await fetchEol(log);
-  const plan = buildPlan(agg.all(), devices, eol);
+  for (const l of eol.latest) agg.addLatest(l.family, l.version, l.date);
+  const plan = buildPlan(agg.all(), devices, eol.info);
   log(
     `Plan: ${plan.majors.length} major versions, ${plan.releases.length} releases, ` +
       `${plan.devices.length} devices, ${plan.support.length} device-support rows`,

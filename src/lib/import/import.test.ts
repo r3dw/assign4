@@ -97,6 +97,17 @@ describe("aggregator", () => {
     assert.equal(m.support.size, 0);
   });
 
+  it("adds endoflife.date's latest release when AppleDB lacks it or its date", () => {
+    const a = new Aggregator();
+    a.addBuild(build({ version: "17.7.3", build: "21H1", released: "", deviceMap: ["iPhone10,1"] }));
+    a.addLatest("iOS", "17.7.7", "2025-05-13");
+    a.addLatest("iOS", "not a version", null); // ignored
+    const m = a.all().find((x) => x.major === 17)!;
+    const rows = [...m.releases.values()].map((r) => `${r.version}:${r.released}:${r.source}`).sort();
+    assert.deepEqual(rows, ["17.7.3:null:appledb", "17.7.7:2025-05-13:endoflife.date"]);
+    assert.equal(m.released, "2025-05-13"); // the dated record sets the major version's release date
+  });
+
   it("keeps the first record when the same release arrives twice (Apple's feed first)", () => {
     const a = new Aggregator();
     a.addRss({ os: "iOS", version: "27.2", pre: null, preN: null, build: "24K1", date: "2026-10-26", source: "Apple Developer RSS" });

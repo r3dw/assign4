@@ -140,6 +140,24 @@ export class Aggregator {
     });
   }
 
+  /**
+   * Add the latest release of a major version as reported by endoflife.date. AppleDB
+   * sometimes lacks the newest point release or its date; the page shows the highest version
+   * it has from either source.
+   */
+  addLatest(family: DbFamily, version: string, date: string | null) {
+    const major = parseInt(version.split(".")[0], 10);
+    if (!Number.isFinite(major) || !LEADING_VERSION.test(version)) return;
+    this.note(this.major(family, major), {
+      version,
+      build: "",
+      kind: "release",
+      preN: null,
+      released: date,
+      source: "endoflife.date",
+    });
+  }
+
   /** Add one build record from an AppleDB file. Unrecognised records are skipped. */
   addBuild(raw: unknown) {
     const b = raw as {

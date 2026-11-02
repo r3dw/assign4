@@ -456,8 +456,10 @@ export function VersionsApp() {
 
       <footer className="site-footer">
         <p>
-          Data comes from endoflife.date and Apple&apos;s developer release feed. This is an unofficial tool and is not
-          affiliated with Apple. The device check runs in your browser; nothing about your device is sent anywhere.
+          Data comes from endoflife.date, Apple&apos;s developer release feed, and{" "}
+          <a href="https://appledb.dev">AppleDB</a> (MIT licensed), which supplies betas, release candidates, and which
+          devices each version runs on. This is an unofficial tool and is not affiliated with Apple. The device check
+          runs in your browser; nothing about your device is sent anywhere.
         </p>
       </footer>
 
