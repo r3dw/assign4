@@ -282,7 +282,25 @@ button.primary {
   backdrop-filter: var(--blur);
   box-shadow: var(--shadow), inset 0 1px 0 var(--glass-hi);
 }
-.user-slot { display: flex; align-items: center; height: 2.9rem; }
+/* The account avatar sits in the same round glass button as Refresh and Settings. */
+.user-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: 50%;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--glass-hi);
+}
+.user-slot:hover { border-color: var(--accent); }
+.user-slot:has(:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-transparency: reduce) {
+  .user-slot { background: var(--ctl); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
 
 /* A button that reads as a link: used for "Supported devices" and the release-line names. */
 .link-btn {

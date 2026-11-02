@@ -19,12 +19,15 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
  */
 export function Tour({
   settings,
+  panelOpen,
   setPanelOpen,
   setLift,
   tip,
   onEnd,
 }: {
   settings: Settings;
+  /** Whether the settings panel is currently shown. The tour re-positions its dialog when this changes. */
+  panelOpen: boolean;
   setPanelOpen: (open: boolean) => void;
   setLift: (lift: boolean) => void;
   tip: { show: (host: HTMLElement, control: Element) => void; hide: () => void };
@@ -137,6 +140,7 @@ export function Tour({
       d.style.top = `${Math.max(8, (window.innerHeight - d.offsetHeight) / 3)}px`;
       return;
     }
+    if (panel && panel.contains(target) && panel.hidden) return; // not shown yet: measuring it would give zeros
     const r = target.getBoundingClientRect();
     if (panel && panel.contains(target)) {
       // Keep the settings panel readable: put the dialog beside it, or below it on narrow screens.
@@ -186,6 +190,13 @@ export function Tour({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- steps is rebuilt each render; only the index matters
   }, [index]);
+
+  // Opening the panel takes a render, so a step that opens it cannot be measured straight away.
+  // Place the dialog again once the panel is actually on screen.
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => place(highlighted.current));
+    return () => cancelAnimationFrame(raf);
+  }, [panelOpen]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

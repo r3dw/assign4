@@ -313,7 +313,7 @@ export function VersionsApp() {
             </Show>
             <Show when="signed-in">
               <div className="user-slot">
-                <UserButton />
+                <UserButton appearance={{ elements: { avatarBox: { width: "1.9rem", height: "1.9rem" } } }} />
               </div>
             </Show>
 
@@ -519,7 +519,7 @@ export function VersionsApp() {
       {tip.bubble}
 
       {tourActive && (
-        <Tour settings={settings} setPanelOpen={setPanelOpen} setLift={setLift} tip={tip} onEnd={endTour} />
+        <Tour settings={settings} panelOpen={panelOpen} setPanelOpen={setPanelOpen} setLift={setLift} tip={tip} onEnd={endTour} />
       )}
     </>
   );
