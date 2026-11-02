@@ -12,7 +12,8 @@ This is version 2 of [assign3](https://github.com/r3dw/assign3), a Python and va
 - **Two views, one page:** tabs switch between *All versions* and *My devices* without leaving the page. A signed-in visitor returns to the tab they used last, and a link ending in `#my-devices` opens that tab directly.
 - **My devices** (signed in): pick a category, then a device (grouped by product type, newest first), add a nickname, and see each device's oldest and newest OS and whether that OS still receives updates. The list is private to the account and remembered between visits.
 - **Device check:** in Chrome or Edge on a Mac, a banner says whether your own Mac is up to date. It runs entirely in the browser.
-- **Themes and accessibility:** light, dark, and terminal themes, adjustable text size, keyboard-accessible controls (screen-reader use has not been tested), and a guided tour on first visit.
+- **Themes and accessibility:** light, dark, and terminal themes, adjustable text size, and keyboard-accessible controls (screen-reader use has not been tested).
+- **Guided tour:** a first-visit walkthrough of the page, replayable any time from **Settings, Take the tour**. It has nine steps, ten when you are signed in, and **Esc** leaves it at any point. It spotlights the tabs, the settings menu (theme, text size, and which versions to show), the refresh button, the **Supported devices** link, and, for signed-in visitors, the **Add a device** form. Several steps have a **Show me** button that demonstrates the control: it cycles through the themes, enlarges the text, switches on older and beta versions, shows the tooltip on the refresh button, or opens the real supported-devices list for a few seconds. These demonstrations are temporary and are undone when the tour ends, which also returns you to the tab you started on. The steps are defined in `src/lib/tourSteps.ts`.
 
 ## Tech stack
 
@@ -115,7 +116,7 @@ Defined in `supabase/migrations/`, run in order:
 ```
 src/app/                 Pages, global CSS, and the API routes
 src/components/          Page UI: cards, dialog, My devices, tour, tooltips, icons
-src/lib/                 Version merging, device check, database sources and helpers
+src/lib/                 Version merging, device check, tour steps, database sources and helpers
 src/lib/import/          The import job: streaming reader, AppleDB aggregation, database writes
 src/proxy.ts             Clerk's per-request context (Next.js 16 name for middleware)
 scripts/import.ts        Command-line runner for the import
@@ -126,7 +127,7 @@ vercel.json              The daily cron schedule
 
 ## Testing
 
-`npm test` runs about 70 offline tests covering version parsing and merging, the device check, the streaming JSON reader, the import aggregation and hardware-variant merging, and input validation for saved devices. Beyond that, the interface was checked in headless Chrome on macOS (dark theme, phone width, and estimated iPhone Duo screen sizes) and by hand in a desktop browser; sign-in and the database connection were confirmed on the live site, and saved devices were exercised by hand on localhost.
+`npm test` runs about 85 offline tests covering version parsing and merging, the device check, the streaming JSON reader, the import aggregation and hardware-variant merging, input validation for saved devices, the tab keyboard handling, and the order and signed-in rules of the guided tour. Beyond that, the interface was checked in headless Chrome on macOS (dark theme, phone width, and estimated iPhone Duo screen sizes) and by hand in a desktop browser; sign-in and the database connection were confirmed on the live site, and saved devices were exercised by hand on localhost. The guided tour's signed-in step cannot be run automatically (it needs a real sign-in), so it was checked by hand.
 
 ## Deployment
 
