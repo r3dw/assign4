@@ -51,6 +51,13 @@ export function Tour({
         "You can move at your own pace, and press Escape at any time to leave.",
     },
     {
+      target: "tabs",
+      title: "Two views",
+      body:
+        "Use these tabs to switch between every Apple OS and your own saved devices. Sign in to save your devices " +
+        "and see the newest version each one can run.",
+    },
+    {
       target: "settings-btn",
       title: "The settings menu",
       body:

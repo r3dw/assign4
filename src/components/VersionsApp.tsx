@@ -1,9 +1,10 @@
 "use client";
 
-import { Show, SignInButton, UserButton } from "@clerk/nextjs";
+import { Show, SignInButton, UserButton, useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { detect, evaluate, type DeviceInfo } from "@/lib/device";
 import { badgeEntries, formatDateTime, newness, previewDate } from "@/lib/format";
+import { hashForTab, tabFromHash, type TabId } from "@/lib/tabs";
 import { load, save, SIZES, useSettings, type Theme } from "@/lib/useSettings";
 import type { Payload } from "@/lib/versions";
 import { Card } from "./Card";
@@ -11,6 +12,7 @@ import { DevicesDialog, type DevicesTarget } from "./DevicesDialog";
 import { Icon } from "./Icon";
 import { MyDevicesSection } from "./MyDevices";
 import { Tour } from "./Tour";
+import { ViewTabs } from "./ViewTabs";
 import { useTooltip } from "./Tooltip";
 
 const DEVICE_ICONS = { ok: "✓", warn: "⚠", info: "ℹ" };
@@ -66,6 +68,12 @@ export function VersionsApp() {
   const [lift, setLift] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [devicesTarget, setDevicesTarget] = useState<DevicesTarget | null>(null);
+
+  // Two views of one page: all versions, or the signed-in user's saved devices.
+  const { isLoaded, isSignedIn } = useAuth();
+  const [tab, setTab] = useState<TabId>("versions");
+  const [deviceCount, setDeviceCount] = useState<number | null>(null);
+  const chose = useRef(false); // true once the visitor (or a link) has picked a tab
 
   const panelRef = useRef<HTMLDivElement>(null);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
@@ -244,6 +252,36 @@ export function VersionsApp() {
     setOptions(o, b);
   }
 
+  // ---------- Tabs ----------
+
+  const selectTab = useCallback((next: TabId) => {
+    chose.current = true;
+    setTab(next);
+    save("tab", next);
+    // Show #my-devices in the address bar without adding a history entry.
+    history.replaceState(null, "", `${location.pathname}${location.search}${hashForTab(next)}`);
+  }, []);
+
+  // A link ending in #my-devices opens that tab, now and whenever the hash changes.
+  useEffect(() => {
+    const fromHash = () => {
+      const t = tabFromHash(location.hash);
+      if (t) {
+        chose.current = true;
+        setTab(t);
+      }
+    };
+    fromHash();
+    window.addEventListener("hashchange", fromHash);
+    return () => window.removeEventListener("hashchange", fromHash);
+  }, []);
+
+  // Signed-in visitors return to the tab they used last. Signed-out visitors always start on
+  // All versions, since My devices would only show them a sign-in prompt.
+  useEffect(() => {
+    if (isLoaded && isSignedIn && !chose.current && load("tab", "versions") === "devices") setTab("devices");
+  }, [isLoaded, isSignedIn]);
+
   const ctx = { now, pulses };
   const sourceEntries = data ? Object.entries(data.sources) : [];
   const headerClass = ["site-header", stuck && "is-stuck", showTitle && "show-title", lift && "tour-lift"]
@@ -252,8 +290,8 @@ export function VersionsApp() {
 
   return (
     <>
-      <a className="skip-link" href="#results">
-        Skip to versions
+      <a className="skip-link" href="#content">
+        Skip to content
       </a>
 
       <div className="ambient" aria-hidden="true" />
@@ -430,31 +468,41 @@ export function VersionsApp() {
           <p id="device-text">{deviceResult?.message}</p>
         </div>
 
-        <p id="status" className={status.error ? "status error" : "status"} role="status" aria-live="polite">
-          {status.text}
-        </p>
+        <ViewTabs tab={tab} onSelect={selectTab} count={isSignedIn ? deviceCount : null} />
 
-        {/* First-load spinner. Decorative: the status line above announces "Loading versions…". */}
-        <div id="loading" className="loading" aria-hidden="true" hidden={!loading || data !== null}>
-          <Spinner />
+        <div id="content" tabIndex={-1}>
+          {/* Both panels stay in the page; the hidden one is only not displayed, so switching is instant
+              and anything half-typed in the My devices form is still there on return. */}
+          <div id="panel-versions" className="tab-panel" role="tabpanel" aria-labelledby="tab-versions" hidden={tab !== "versions"}>
+            <p id="status" className={status.error ? "status error" : "status"} role="status" aria-live="polite">
+              {status.text}
+            </p>
+
+            {/* First-load spinner. Decorative: the status line above announces "Loading versions…". */}
+            <div id="loading" className="loading" aria-hidden="true" hidden={!loading || data !== null}>
+              <Spinner />
+            </div>
+
+            <section id="results" className="results" aria-label="Apple OS versions" tabIndex={-1}>
+              {data?.families.map((f) => (
+                <Card key={f.name} family={f} older={older} showBeta={beta} ctx={ctx} onShowDevices={setDevicesTarget} />
+              ))}
+            </section>
+
+            <section id="source-info" className="source-info" hidden={!data}>
+              <h2>Data sources</h2>
+              <ul id="source-list">
+                {sourceEntries.map(([name, state]) => (
+                  <li key={name}>{`${name}: ${state === "ok" ? "working" : state}`}</li>
+                ))}
+              </ul>
+            </section>
+          </div>
+
+          <div id="panel-devices" className="tab-panel" role="tabpanel" aria-labelledby="tab-devices" hidden={tab !== "devices"}>
+            <MyDevicesSection onCount={setDeviceCount} />
+          </div>
         </div>
-
-        <section id="results" className="results" aria-label="Apple OS versions" tabIndex={-1}>
-          {data?.families.map((f) => (
-            <Card key={f.name} family={f} older={older} showBeta={beta} ctx={ctx} onShowDevices={setDevicesTarget} />
-          ))}
-        </section>
-
-        <MyDevicesSection />
-
-        <section id="source-info" className="source-info" hidden={!data}>
-          <h2>Data sources</h2>
-          <ul id="source-list">
-            {sourceEntries.map(([name, state]) => (
-              <li key={name}>{`${name}: ${state === "ok" ? "working" : state}`}</li>
-            ))}
-          </ul>
-        </section>
       </main>
 
       <footer className="site-footer">

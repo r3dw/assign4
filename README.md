@@ -9,6 +9,7 @@ This is version 2 of [assign3](https://github.com/r3dw/assign3), a Python and va
 - **Current versions** for iOS, iPadOS, macOS, watchOS, tvOS, visionOS, and HomePod Software, with the three supported major versions up front and older ones on request.
 - **Betas and release candidates**, including those for older macOS lines, with "New" badges for anything released in the last day or so.
 - **Supported devices:** click any OS version for the list of devices that can run it, grouped by category, with each device's first and last release of that version. Includes a filter.
+- **Two views, one page:** tabs switch between *All versions* and *My devices* without leaving the page. A signed-in visitor returns to the tab they used last, and a link ending in `#my-devices` opens that tab directly.
 - **My devices** (signed in): pick a category, then a device (grouped by product type, newest first), add a nickname, and see each device's oldest and newest OS and whether that OS still receives updates. The list is private to the account and remembered between visits.
 - **Device check:** in Chrome or Edge on a Mac, a banner says whether your own Mac is up to date. It runs entirely in the browser.
 - **Themes and accessibility:** light, dark, and terminal themes, adjustable text size, keyboard-accessible controls (screen-reader use has not been tested), and a guided tour on first visit.

@@ -301,8 +301,96 @@ button.primary {
 .devices-btn { margin: 0 0 0.5rem; }
 td .link-btn, th .link-btn { min-height: 0; }
 
+/* View tabs: a pill switch whose highlight slides between the two tabs. The thumb moves with
+   CSS alone (data-active on the container), so it needs no layout measuring. */
+.tabs {
+  --pad: 0.3rem;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: min(100%, 26rem);
+  margin: 0.4rem auto 1.4rem;
+  padding: var(--pad);
+  border-radius: 999px;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--glass-hi);
+}
+.tabs-thumb {
+  position: absolute;
+  top: var(--pad);
+  bottom: var(--pad);
+  left: var(--pad);
+  width: calc((100% - 2 * var(--pad)) / 2);
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 38%, transparent);
+  transition: transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1); /* a small overshoot, like a spring */
+}
+.tabs[data-active="devices"] .tabs-thumb { transform: translateX(100%); }
+.tab {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.8rem;
+  padding: 0 1rem;
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  color: var(--text);
+  font-weight: 600;
+  transition: color 0.25s;
+}
+.tab svg { width: 1.2rem; height: 1.2rem; flex-shrink: 0; }
+.tab[aria-selected="true"] { color: var(--on-accent); }
+.tab:not([aria-selected="true"]):hover { color: var(--accent); }
+.tab-count {
+  min-width: 1.5rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  font-size: 0.8rem;
+  line-height: 1.4rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.tabs[data-tour-highlight] { border-radius: 999px; }
+#content:focus { outline: none; } /* the skip link's target; it only needs to receive focus */
+
+/* Terminal: flat and blocky. The highlight steps across instead of gliding, and the selected
+   tab gets a prompt marker. */
+:root[data-theme="terminal"] .tabs {
+  border-radius: 0.2rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  box-shadow: none;
+}
+:root[data-theme="terminal"] .tabs[data-tour-highlight] { border-radius: 0.2rem; }
+:root[data-theme="terminal"] .tabs-thumb { border-radius: 0.15rem; box-shadow: none; transition: transform 0.24s steps(5); }
+:root[data-theme="terminal"] .tab { border-radius: 0.15rem; }
+:root[data-theme="terminal"] .tab svg { display: none; }
+:root[data-theme="terminal"] .tab[aria-selected="true"]::before { content: ">"; font-weight: 700; }
+
+/* The panel that appears fades up a little. */
+@keyframes panel-in { from { opacity: 0; transform: translateY(0.5rem); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .tab-panel:not([hidden]) { animation: panel-in 0.3s ease both; }
+  :root[data-theme="terminal"] .tab-panel:not([hidden]) { animation: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tabs-thumb, .tab { transition: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .tabs { background: var(--ctl); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
 /* My devices */
-.my-devices { margin: 2rem 0 0; }
+.my-devices { margin: 0; }
 .my-devices h2 { margin: 0 0 0.3rem; font-size: 1.4rem; }
 .my-devices h3 { margin: 0; font-size: 1.05rem; }
 .my-devices .status { min-height: 1.5rem; margin: 0.4rem 0; }

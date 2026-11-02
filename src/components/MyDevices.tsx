@@ -25,7 +25,7 @@ async function errorText(res: Response, fallback: string): Promise<string> {
 }
 
 /** The signed-in view: the saved devices and a form to add more. */
-function SavedDevices() {
+function SavedDevices({ onCount }: { onCount: (count: number) => void }) {
   const [catalog, setCatalog] = useState<CatalogDevice[] | null>(null);
   const [saved, setSaved] = useState<MyDevice[] | null>(null);
   const [limit, setLimit] = useState(MAX_SAVED_DEVICES);
@@ -46,7 +46,8 @@ function SavedDevices() {
     const body = await fetchSaved();
     setSaved(body.devices);
     setLimit(body.limit);
-  }, [fetchSaved]);
+    onCount(body.devices.length);
+  }, [fetchSaved, onCount]);
 
   useEffect(() => {
     fetch("/api/devices")
@@ -59,9 +60,10 @@ function SavedDevices() {
       .then((body) => {
         setSaved(body.devices);
         setLimit(body.limit);
+        onCount(body.devices.length);
       })
       .catch((e: Error) => setMessage({ text: e.message, error: true }));
-  }, [fetchSaved]);
+  }, [fetchSaved, onCount]);
 
   const categories = useMemo(() => (catalog ? catalogCategories(catalog) : []), [catalog]);
   const groups = useMemo(() => (catalog && category ? devicesByType(catalog, category) : []), [catalog, category]);
@@ -212,17 +214,17 @@ function SavedDevices() {
 }
 
 /** The "My devices" section: the saved list when signed in, a sign-in prompt otherwise. */
-export function MyDevicesSection() {
+export function MyDevicesSection({ onCount }: { onCount: (count: number) => void }) {
   return (
     <section id="my-devices" className="my-devices card glass" aria-labelledby="my-devices-title">
       <h2 id="my-devices-title">My devices</h2>
       <Show when="signed-in">
-        <SavedDevices />
+        <SavedDevices onCount={onCount} />
       </Show>
       <Show when="signed-out">
         <p className="meta">
-          Sign in with your email address to save your devices and see the newest Apple OS each one can run. Nothing is
-          required to browse the versions above.
+          Sign in with your email address to save your devices and see the newest Apple OS each one can run. You don&apos;t
+          need an account to browse the versions.
         </p>
         <SignInButton mode="modal">
           <button type="button" className="primary">
