@@ -95,6 +95,7 @@ export async function collectPlan(log: Log): Promise<Plan> {
       `${plan.devices.length} devices, ${plan.support.length} device-support rows`,
   );
   if (plan.unknownDeviceKeys.length) log(`Builds mention ${plan.unknownDeviceKeys.length} device keys not in the device list`);
+  log(`Hardware variants: ${plan.mergedVariants} folded into one entry, ${plan.unmergedVariants} left apart (support differs)`);
   return plan;
 }
 
@@ -152,6 +153,61 @@ export async function writePlan(db: SupabaseClient, plan: Plan, log: Log): Promi
   }));
   await upsertAll(db, "device_os_support", supportRows, "device_id,major_version_id");
   log(`Wrote ${supportRows.length} device-support rows`);
+
+  await removeStale(db, plan, supportRows, new Set(deviceId.values()), log);
+}
+
+/** Read every row of a table, a page at a time (Supabase returns at most 1000 per request). */
+async function selectAll<T>(db: SupabaseClient, table: string, columns: string, order: string): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await db.from(table).select(columns).order(order).range(from, from + 999);
+    if (error) throw new Error(`${table}: ${error.message}`);
+    out.push(...((data ?? []) as unknown as T[]));
+    if (!data || data.length < 1000) return out;
+  }
+}
+
+/**
+ * Upserts never remove anything, so rows the plan no longer contains (a device that was
+ * merged into another, or an OS version AppleDB dropped) are deleted here. A device that a
+ * user has saved is never deleted; it is reported instead.
+ */
+async function removeStale(
+  db: SupabaseClient,
+  plan: Plan,
+  supportRows: { device_id: number; major_version_id: number }[],
+  plannedDeviceIds: Set<number>,
+  log: Log,
+): Promise<void> {
+  const wanted = new Set(supportRows.map((r) => `${r.device_id}|${r.major_version_id}`));
+  const existing = await selectAll<{ device_id: number; major_version_id: number }>(
+    db, "device_os_support", "device_id, major_version_id", "device_id",
+  );
+  // Support rows of devices that are going away are removed with the device (cascade), so only
+  // rows of devices that stay need deleting one by one.
+  const staleSupport = existing.filter(
+    (r) => plannedDeviceIds.has(r.device_id) && !wanted.has(`${r.device_id}|${r.major_version_id}`),
+  );
+  for (const r of staleSupport) {
+    const { error } = await db.from("device_os_support").delete().eq("device_id", r.device_id).eq("major_version_id", r.major_version_id);
+    if (error) throw new Error(`device_os_support: ${error.message}`);
+  }
+  if (staleSupport.length) log(`Removed ${staleSupport.length} outdated device-support rows`);
+
+  const keep = new Set(plan.devices.map((d) => d.appledb_key));
+  const devices = await selectAll<{ id: number; appledb_key: string }>(db, "devices", "id, appledb_key", "id");
+  const saved = new Set((await selectAll<{ device_id: number }>(db, "user_devices", "device_id", "id")).map((r) => r.device_id));
+  const stale = devices.filter((d) => !keep.has(d.appledb_key));
+  const deletable = stale.filter((d) => !saved.has(d.id)).map((d) => d.id);
+  for (let i = 0; i < deletable.length; i += 200) {
+    const { error } = await db.from("devices").delete().in("id", deletable.slice(i, i + 200));
+    if (error) throw new Error(`devices: ${error.message}`);
+  }
+  if (deletable.length) log(`Removed ${deletable.length} devices that are no longer listed`);
+  if (stale.length > deletable.length) {
+    log(`Kept ${stale.length - deletable.length} outdated devices because users have saved them`);
+  }
 }
 
 export async function runImport(db: SupabaseClient, log: Log): Promise<Plan> {

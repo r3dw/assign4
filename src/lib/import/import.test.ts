@@ -5,9 +5,11 @@ import { gzipSync } from "node:zlib";
 import {
   Aggregator,
   RELEASE_MAJORS,
+  baseName,
   buildPlan,
   categoryOf,
   isoDate,
+  mergeVariants,
   type DeviceRecord,
 } from "./appledb.ts";
 import { decodeText, jsonArrayObjects, maybeGunzip } from "./jsonStream.ts";
@@ -173,6 +175,73 @@ describe("plan", () => {
     const plan = buildPlan(a.all(), devices, {});
     assert.equal(plan.majors.length, 12); // every major is kept for device compatibility
     assert.deepEqual([...new Set(plan.releases.map((r) => r.major))].sort((x, y) => x - y), [5, 6, 7, 8, 9, 10, 11, 12]);
+  });
+});
+
+describe("hardware variants", () => {
+  it("strips connectivity, carrier, region and case-size tags", () => {
+    const cases: [string, string, string][] = [
+      ["iPhone 8 (CDMA)", "iPhone", "iPhone 8"],
+      ["iPhone 8 (GSM)", "iPhone", "iPhone 8"],
+      ["iPad (5th generation) Wi-Fi", "iPad", "iPad (5th generation)"],
+      ["iPad (3rd generation) Wi-Fi + Cellular (VZ)", "iPad", "iPad (3rd generation)"],
+      ["Apple TV 4K (3rd generation) Wi-Fi + Ethernet", "Apple TV", "Apple TV 4K (3rd generation)"],
+      ["HomePod mini (China Mainland)", "HomePod", "HomePod mini"],
+      ["Apple Watch Series 4 (GPS + Cellular, 40mm)", "Apple Watch", "Apple Watch Series 4"],
+      ["Apple Watch SE (1st generation, GPS, 44mm)", "Apple Watch", "Apple Watch SE (1st generation)"],
+      ["Apple Watch (1st generation) (38mm)", "Apple Watch", "Apple Watch (1st generation)"],
+      ["Mac mini (Late 2018)", "Mac", "Mac mini (Late 2018)"], // real differences are left alone
+      ["iMac (24-inch, M1, 2021, Two Ports)", "Mac", "iMac (24-inch, M1, 2021, Two Ports)"],
+    ];
+    for (const [name, category, want] of cases) assert.equal(baseName(name, category), want, name);
+  });
+
+  const row = (key: string, name: string, extra: object = {}) => ({
+    appledb_key: key, name, category: "iPhone", device_type: "iPhone", identifiers: [key],
+    model_numbers: [], soc: null, released: null, discontinued: null, ...extra,
+  });
+  const sup = (deviceKey: string, last = "16.7.16") => ({ deviceKey, family: "iOS" as const, major: 16, first: "16.0", last });
+
+  it("merges variants with identical support into one device with the lowest key", () => {
+    const m = mergeVariants(
+      [
+        row("iPhone10,4", "iPhone 8 (GSM)", { released: "2017-09-22", model_numbers: ["A1905"] }),
+        row("iPhone10,1", "iPhone 8 (CDMA)", { released: "2017-09-20", model_numbers: ["A1863"], discontinued: "2018-09-12" }),
+        row("iPhone11,8", "iPhone XR"),
+      ],
+      [sup("iPhone10,4"), sup("iPhone10,1"), sup("iPhone11,8")],
+    );
+    assert.equal(m.merged, 1);
+    const eight = m.devices.find((d) => d.name === "iPhone 8")!;
+    assert.equal(eight.appledb_key, "iPhone10,1");
+    assert.deepEqual(eight.identifiers, ["iPhone10,1", "iPhone10,4"]);
+    assert.deepEqual(eight.model_numbers, ["A1863", "A1905"]);
+    assert.deepEqual([eight.released, eight.discontinued], ["2017-09-20", "2018-09-12"]);
+    assert.deepEqual(m.support.map((s) => s.deviceKey).sort(), ["iPhone10,1", "iPhone11,8"]);
+    assert.ok(m.devices.some((d) => d.name === "iPhone XR")); // single devices keep their name
+  });
+
+  it("takes the widest range when variants differ only in point releases", () => {
+    const m = mergeVariants(
+      [row("iPhone10,1", "iPhone 8 (CDMA)"), row("iPhone10,4", "iPhone 8 (GSM)")],
+      [
+        { ...sup("iPhone10,1", "16.7.2"), first: "16.0" },
+        { ...sup("iPhone10,4", "16.7.16"), first: "15.9" },
+      ],
+    );
+    assert.equal(m.merged, 1);
+    assert.deepEqual(m.support, [{ deviceKey: "iPhone10,1", family: "iOS", major: 16, first: "15.9", last: "16.7.16" }]);
+  });
+
+  it("leaves a group apart when the variants' newest supported OS differs", () => {
+    const m = mergeVariants(
+      [row("iPhone10,1", "iPhone 8 (CDMA)"), row("iPhone10,4", "iPhone 8 (GSM)")],
+      [sup("iPhone10,1"), { ...sup("iPhone10,4"), major: 15, first: "15.0", last: "15.8" }],
+    );
+    assert.equal(m.merged, 0);
+    assert.equal(m.kept, 2);
+    assert.deepEqual(m.devices.map((d) => d.name).sort(), ["iPhone 8 (CDMA)", "iPhone 8 (GSM)"]);
+    assert.equal(m.support.length, 2);
   });
 });
 

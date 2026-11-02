@@ -9,6 +9,7 @@ import type { Payload } from "@/lib/versions";
 import { Card } from "./Card";
 import { DevicesDialog, type DevicesTarget } from "./DevicesDialog";
 import { Icon } from "./Icon";
+import { MyDevicesSection } from "./MyDevices";
 import { Tour } from "./Tour";
 import { useTooltip } from "./Tooltip";
 
@@ -443,6 +444,8 @@ export function VersionsApp() {
             <Card key={f.name} family={f} older={older} showBeta={beta} ctx={ctx} onShowDevices={setDevicesTarget} />
           ))}
         </section>
+
+        <MyDevicesSection />
 
         <section id="source-info" className="source-info" hidden={!data}>
           <h2>Data sources</h2>

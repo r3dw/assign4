@@ -25,7 +25,7 @@ function summarise(plan: Plan) {
   console.log("\nSpot checks (first..last release per family):");
   // Hardware identifiers of devices whose last supported OS is well known.
   const keys = ["iPhone9,1", "iPhone10,1", "iPhone11,8", "iPhone12,1", "iPhone19,4", "iPad6,11", "iPad6,7",
-    "Macmini8,1", "MacBookPro11,4", "MacBookAir10,1", "Watch4,3", "AudioAccessory5,1"];
+    "Macmini8,1", "MacBookPro11,4", "MacBookAir10,1", "Watch4,1", "AudioAccessory5,1"];
   for (const key of keys) {
     const d = plan.devices.find((x) => x.appledb_key === key);
     if (!d) {

@@ -265,6 +265,104 @@ export function toDeviceRow(d: DeviceRecord, category: string): DeviceRow {
   };
 }
 
+// --- Merging hardware variants ------------------------------------------------------
+// AppleDB lists a product once per model: "iPhone 8 (CDMA)" and "iPhone 8 (GSM)", an iPad
+// as "Wi-Fi" and "Wi-Fi + Cellular", a watch per case size. They run exactly the same
+// software, so people picking their device should see one entry.
+
+/** A device name without connectivity, carrier, region and case-size tags. */
+export function baseName(name: string, category: string): string {
+  let n = name;
+  for (;;) {
+    const before = n;
+    n = n
+      .replace(/\s+\((?:CDMA|GSM|China Mainland|VZ|MM)\)\s*$/i, "")
+      .replace(/\s+Wi-Fi(?:\s*\+\s*(?:Cellular|Ethernet))?\s*$/i, "");
+    if (n === before) break;
+  }
+  if (category === "Apple Watch") {
+    n = n
+      .replace(/,?\s*GPS(?:\s*\+\s*Cellular)?/gi, "")
+      .replace(/,?\s*\d+\s*mm/gi, "")
+      .replace(/\s*\([\s,]*\)/g, ""); // parentheses left empty by the removals
+  }
+  return n.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Collapse variants of one product into a single device. Variants merge only when they share
+ * a base name and category AND the same newest supported major version of each OS (so a
+ * merged entry never hides a real difference in how far the hardware goes). Point-release
+ * differences between variants (9.3.5 vs 9.3.6) are noise: the merged entry takes the widest
+ * range. A group whose newest versions differ is left exactly as AppleDB lists it.
+ */
+export function mergeVariants(
+  devices: DeviceRow[],
+  support: Plan["support"],
+): { devices: DeviceRow[]; support: Plan["support"]; merged: number; kept: number } {
+  const byDevice = new Map<string, Plan["support"]>();
+  for (const s of support) byDevice.set(s.deviceKey, [...(byDevice.get(s.deviceKey) ?? []), s]);
+
+  // "iOS|16;iPadOS|18": the newest major supported in each OS family.
+  const top = (key: string) => {
+    const newest = new Map<string, number>();
+    for (const s of byDevice.get(key) ?? []) newest.set(s.family, Math.max(newest.get(s.family) ?? -1, s.major));
+    return [...newest].map(([f, m]) => `${f}|${m}`).sort().join(";");
+  };
+
+  const groups = new Map<string, DeviceRow[]>();
+  for (const d of devices) {
+    const key = `${d.category}|${baseName(d.name, d.category)}`;
+    groups.set(key, [...(groups.get(key) ?? []), d]);
+  }
+
+  const out: DeviceRow[] = [];
+  const outSupport: Plan["support"] = [];
+  const keptApart = new Set<string>();
+  let merged = 0;
+  let kept = 0;
+  for (const members of groups.values()) {
+    const sameTop = members.every((m) => top(m.appledb_key) === top(members[0].appledb_key));
+    if (members.length === 1 || !sameTop) {
+      if (members.length > 1) kept += members.length;
+      out.push(...members);
+      members.forEach((m) => keptApart.add(m.appledb_key));
+      continue;
+    }
+    const sorted = [...members].sort((a, b) => a.appledb_key.localeCompare(b.appledb_key));
+    const first = sorted[0]; // the lowest key is the stable identity of the merged device
+    const dates = (f: "released" | "discontinued") => sorted.map((m) => m[f]).filter((x): x is string => !!x).sort();
+    out.push({
+      ...first,
+      name: baseName(first.name, first.category),
+      identifiers: [...new Set(sorted.flatMap((m) => [m.appledb_key, ...m.identifiers]))].sort(),
+      model_numbers: [...new Set(sorted.flatMap((m) => m.model_numbers))].sort(),
+      released: dates("released")[0] ?? null,
+      discontinued: dates("discontinued").at(-1) ?? null,
+    });
+    merged += sorted.length - 1;
+
+    // One support row per OS version, spanning every variant's range.
+    const rows = new Map<string, Plan["support"][number]>();
+    for (const m of sorted) {
+      for (const s of byDevice.get(m.appledb_key) ?? []) {
+        const k = `${s.family}|${s.major}`;
+        const r = rows.get(k);
+        if (!r) rows.set(k, { ...s, deviceKey: first.appledb_key });
+        else {
+          if (compareVersions(s.first, r.first) < 0) r.first = s.first;
+          if (compareVersions(s.last, r.last) > 0) r.last = s.last;
+        }
+      }
+    }
+    outSupport.push(...rows.values());
+  }
+  for (const s of support) if (keptApart.has(s.deviceKey)) outSupport.push(s);
+
+  out.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+  return { devices: out, support: outSupport, merged, kept };
+}
+
 // --- The plan: everything to write, keyed by natural keys ---------------------------
 
 export interface EolInfo {
@@ -287,6 +385,9 @@ export interface Plan {
   support: { deviceKey: string; family: DbFamily; major: number; first: string; last: string }[];
   /** Device keys that builds mention but the device list does not know, for the log. */
   unknownDeviceKeys: string[];
+  /** Hardware variants folded into another device, and variants left apart because their support differs. */
+  mergedVariants: number;
+  unmergedVariants: number;
 }
 
 export function buildPlan(
@@ -344,5 +445,14 @@ export function buildPlan(
   }
   devices.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
 
-  return { majors, releases, devices, support, unknownDeviceKeys: [...unknown].sort() };
+  const m = mergeVariants(devices, support);
+  return {
+    majors,
+    releases,
+    devices: m.devices,
+    support: m.support,
+    unknownDeviceKeys: [...unknown].sort(),
+    mergedVariants: m.merged,
+    unmergedVariants: m.kept,
+  };
 }
