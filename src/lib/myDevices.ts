@@ -79,6 +79,22 @@ const typeRank = (category: string, type: string) => {
   return i === -1 ? 999 : i;
 };
 
+/** The screen size in a device name ("iPad Pro 12.9-inch (6th generation)" -> 12.9), or 0. */
+export function screenSize(name: string): number {
+  const m = /(\d+(?:\.\d+)?)-inch/.exec(name);
+  return m ? Number(m[1]) : 0;
+}
+
+/**
+ * The dropdown text for a device: its name plus the release year, which helps match the
+ * model printed on the box. The year is left off when the name already contains it
+ * ("MacBook Air (M2, 2022)") or when it is unknown.
+ */
+export function deviceLabel(d: Pick<CatalogDevice, "name" | "released">): string {
+  const year = d.released?.slice(0, 4);
+  return year && !d.name.includes(year) ? `${d.name} \u2013 ${year}` : d.name;
+}
+
 /** The categories that have devices, with counts, for the first dropdown. */
 export function catalogCategories(devices: CatalogDevice[]): { category: string; count: number }[] {
   const counts = new Map<string, number>();
@@ -102,8 +118,12 @@ export function devicesByType(
     const type = d.device_type ?? category;
     byType.set(type, [...(byType.get(type) ?? []), d]);
   }
+  // Newest first. Models released together (the 11-inch and 12.9-inch iPad Pro, the 14- and
+  // 16-inch MacBook Pro) go largest screen first, so each launch reads as a predictable pair.
   const newestFirst = (a: CatalogDevice, b: CatalogDevice) =>
-    (b.released ?? "").localeCompare(a.released ?? "") || a.name.localeCompare(b.name, undefined, { numeric: true });
+    (b.released ?? "").localeCompare(a.released ?? "") ||
+    screenSize(b.name) - screenSize(a.name) ||
+    a.name.localeCompare(b.name, undefined, { numeric: true });
   const groups = [...byType]
     .map(([type, list]) => ({ label: type, devices: [...list].sort(newestFirst) }))
     .sort((a, b) => typeRank(category, a.label) - typeRank(category, b.label) || a.label.localeCompare(b.label));

@@ -225,6 +225,9 @@ export interface DeviceRecord {
   discontinued?: unknown;
 }
 
+/** AppleDB also lists prototypes, e.g. "Unreleased iPad Pro". Nobody owns those. */
+const NOT_A_PRODUCT = /^(unreleased|prototype)\b/i;
+
 /** Group AppleDB's many product types into the categories shown in the device dropdown. */
 export function categoryOf(type: string | undefined): string | null {
   if (!type) return null;
@@ -276,8 +279,12 @@ export function baseName(name: string, category: string): string {
   for (;;) {
     const before = n;
     n = n
+      // Trailing tags: carrier or region ("(CDMA)", "(VZ)"), storage ("(1TB)", "(1 or 2 TB)"), "(TD-LTE)".
       .replace(/\s+\((?:CDMA|GSM|China Mainland|VZ|MM)\)\s*$/i, "")
-      .replace(/\s+Wi-Fi(?:\s*\+\s*(?:Cellular|Ethernet))?\s*$/i, "");
+      .replace(/\s*\(\s*\d+(?:\s*or\s*\d+)?\s*(?:GB|TB)\s*\)\s*$/i, "")
+      .replace(/\s+\(TD[- ]LTE\)\s*$/i, "")
+      // Connectivity anywhere in the name: "iPad Pro 11-inch Wi-Fi + Cellular (M5)" -> "iPad Pro 11-inch (M5)".
+      .replace(/\s+Wi-?Fi(?:\s*\+\s*(?:Cellular|Ethernet|3G|4G))?(?=\s|\(|$)/gi, "");
     if (n === before) break;
   }
   if (category === "Apple Watch") {
@@ -431,7 +438,7 @@ export function buildPlan(
           unknown.add(key);
           continue;
         }
-        if (!categoryOf(d.type)) continue;
+        if (!categoryOf(d.type) || NOT_A_PRODUCT.test(d.name)) continue;
         usedDevices.add(key);
         support.push({ deviceKey: key, family, major: m.major, first: r.first, last: r.last });
       }

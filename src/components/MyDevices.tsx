@@ -6,6 +6,7 @@ import {
   MAX_NICKNAME_LENGTH,
   MAX_SAVED_DEVICES,
   catalogCategories,
+  deviceLabel,
   devicesByType,
   osRange,
   type CatalogDevice,
@@ -177,7 +178,7 @@ function SavedDevices() {
             {groups.map((g) => {
               const options = g.devices.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.name}
+                  {deviceLabel(d)}
                 </option>
               ));
               return g.label ? (

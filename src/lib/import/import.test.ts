@@ -159,6 +159,16 @@ describe("plan", () => {
     assert.equal(plan.devices.find((d) => d.appledb_key === "iPhone19,4")!.released, null);
   });
 
+  it("leaves prototypes such as \"Unreleased iPad Pro\" out of the device list", () => {
+    const a = new Aggregator();
+    a.addBuild({ osStr: "iOS", version: "9.0", build: "b", released: "2015-09-16", deviceMap: ["iPad5,5", "iPhone10,1"] });
+    const devs: DeviceRecord[] = [
+      { key: "iPad5,5", name: "Unreleased iPad Pro", type: "iPad Pro" },
+      { key: "iPhone10,1", name: "iPhone 8", type: "iPhone" },
+    ];
+    assert.deepEqual(buildPlan(a.all(), devs, {}).devices.map((d) => d.name), ["iPhone 8"]);
+  });
+
   it("applies endoflife.date details to a major version", () => {
     const plan = buildPlan(agg().all(), devices, {
       iOS: { 18: { released: "2024-09-16", endOfSupport: "2027-09-01", codename: "Test" } },
@@ -190,6 +200,13 @@ describe("hardware variants", () => {
       ["Apple Watch Series 4 (GPS + Cellular, 40mm)", "Apple Watch", "Apple Watch Series 4"],
       ["Apple Watch SE (1st generation, GPS, 44mm)", "Apple Watch", "Apple Watch SE (1st generation)"],
       ["Apple Watch (1st generation) (38mm)", "Apple Watch", "Apple Watch (1st generation)"],
+      ["iPad Pro 11-inch (3rd generation) Wi-Fi + Cellular (1 or 2 TB)", "iPad", "iPad Pro 11-inch (3rd generation)"],
+      ["iPad Pro 11-inch (1st generation) Wi-Fi (1TB)", "iPad", "iPad Pro 11-inch (1st generation)"],
+      ["iPad Pro 11-inch Wi-Fi + Cellular (M5)", "iPad", "iPad Pro 11-inch (M5)"],
+      ["iPad Pro 13-inch Wi-Fi (M5)", "iPad", "iPad Pro 13-inch (M5)"],
+      ["iPad Air Wi-Fi + Cellular (TD-LTE)", "iPad", "iPad Air"],
+      ["iPad 2 Wi-Fi + 3G (CDMA)", "iPad", "iPad 2"],
+      ["iPad 2 Wi-Fi (Mid 2012)", "iPad", "iPad 2 (Mid 2012)"],
       ["Mac mini (Late 2018)", "Mac", "Mac mini (Late 2018)"], // real differences are left alone
       ["iMac (24-inch, M1, 2021, Two Ports)", "Mac", "iMac (24-inch, M1, 2021, Two Ports)"],
     ];

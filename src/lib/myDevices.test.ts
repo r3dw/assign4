@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   catalogCategories,
+  deviceLabel,
   devicesByType,
   isUuid,
   osRange,
   parseDeviceId,
   parseNickname,
+  screenSize,
   type CatalogDevice,
 } from "./myDevices.ts";
 
@@ -89,6 +91,32 @@ describe("device dropdown", () => {
     assert.deepEqual(groups.map((g) => g.label), ["MacBook Air", "iMac", "PowerBook", "Zeta"]);
     assert.deepEqual(groups[0].devices.map((d) => d.name), ["MacBook Air (M4, 2025)", "MacBook Air (M2, 2022)"]);
     assert.deepEqual(devicesByType(catalog, "iPad").map((g) => g.label), ["iPad Pro", "iPad"]);
+  });
+
+  it("puts models released together largest screen first", () => {
+    const pro = [
+      dev(1, "iPad Pro 11-inch (4th generation)", "iPad", "iPad Pro", "2022-10-26"),
+      dev(2, "iPad Pro 12.9-inch (6th generation)", "iPad", "iPad Pro", "2022-10-26"),
+      dev(3, "iPad Pro 13-inch (M4)", "iPad", "iPad Pro", "2024-05-15"),
+      dev(4, "iPad Pro 11-inch (M4)", "iPad", "iPad Pro", "2024-05-15"),
+      dev(5, "iPad Pro (9.7-inch)", "iPad", "iPad Pro", "2016-03-31"),
+    ];
+    assert.deepEqual(
+      devicesByType(pro, "iPad")[0].devices.map((d) => d.name),
+      ["iPad Pro 13-inch (M4)", "iPad Pro 11-inch (M4)", "iPad Pro 12.9-inch (6th generation)", "iPad Pro 11-inch (4th generation)", "iPad Pro (9.7-inch)"],
+    );
+  });
+
+  it("reads screen sizes from names", () => {
+    assert.equal(screenSize("iPad Pro 12.9-inch (6th generation)"), 12.9);
+    assert.equal(screenSize("iPad Pro (10.5-inch)"), 10.5);
+    assert.equal(screenSize("MacBook Air (M2, 2022)"), 0);
+  });
+
+  it("adds the release year to a dropdown label unless it is already there or unknown", () => {
+    assert.equal(deviceLabel({ name: "iPad Pro 12.9-inch (6th generation)", released: "2022-10-26" }), "iPad Pro 12.9-inch (6th generation) \u2013 2022");
+    assert.equal(deviceLabel({ name: "MacBook Air (M2, 2022)", released: "2022-07-15" }), "MacBook Air (M2, 2022)");
+    assert.equal(deviceLabel({ name: "iPhone 8", released: null }), "iPhone 8");
   });
 
   it("returns nothing for an unknown category", () => {
