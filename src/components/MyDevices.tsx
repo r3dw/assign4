@@ -153,7 +153,7 @@ function SavedDevices({ onCount }: { onCount: (count: number) => void }) {
         </ul>
       )}
 
-      <form className="md-form" onSubmit={add}>
+      <form id="tour-add-device" className="md-form" onSubmit={add}>
         <h3>Add a device</h3>
         <label>
           <span>Category</span>

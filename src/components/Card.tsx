@@ -49,12 +49,15 @@ export function Card({
   showBeta,
   ctx,
   onShowDevices,
+  tourId,
 }: {
   family: FamilyResult;
   older: boolean;
   showBeta: boolean;
   ctx: BadgeContext;
   onShowDevices: (target: DevicesTarget) => void;
+  /** An element id for the Supported devices button, so the guided tour can point at it. */
+  tourId?: string;
 }) {
   const show = (cycle: string) =>
     onShowDevices({ family: family.name, major: Number(cycle), label: `${osName(family.name)} ${cycle}` });
@@ -76,6 +79,7 @@ export function Card({
       <p className="meta">{latest.date ? `Released ${formatDate(latest.date)}` : "Release date not available"}</p>
       <button
         type="button"
+        id={tourId}
         className="link-btn devices-btn"
         onClick={() => show(latest.cycle)}
         data-tip={`See which devices can run ${osName(family.name)} ${latest.cycle}.`}

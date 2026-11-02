@@ -397,7 +397,9 @@ td .link-btn, th .link-btn { min-height: 0; }
 /* The panel that appears fades up a little. */
 @keyframes panel-in { from { opacity: 0; transform: translateY(0.5rem); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: no-preference) {
-  .tab-panel:not([hidden]) { animation: panel-in 0.3s ease both; }
+  /* No fill-mode: an animation that keeps its end state makes the panel its own stacking layer, which would trap
+     the guided tour's highlighted card beneath the dimmed backdrop. */
+  .tab-panel:not([hidden]) { animation: panel-in 0.3s ease; }
   :root[data-theme="terminal"] .tab-panel:not([hidden]) { animation: none; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -634,6 +636,10 @@ tr.older td, tr.older th { color: var(--muted); }
 /* Guided tour */
 .tour-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); z-index: 150; }
 .tour-backdrop[hidden], .tour-dialog[hidden] { display: none; }
+/* The card that holds the highlighted element goes above the backdrop with it. */
+[data-tour-lift] { position: relative; z-index: 160; }
+/* Glass is translucent, so the dimmed page would show through it: make the spotlighted card solid. */
+.glass[data-tour-lift] { background: var(--solid); }
 [data-tour-highlight] {
   position: relative;
   z-index: 160;

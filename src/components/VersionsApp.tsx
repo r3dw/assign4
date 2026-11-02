@@ -484,8 +484,16 @@ export function VersionsApp() {
             </div>
 
             <section id="results" className="results" aria-label="Apple OS versions" tabIndex={-1}>
-              {data?.families.map((f) => (
-                <Card key={f.name} family={f} older={older} showBeta={beta} ctx={ctx} onShowDevices={setDevicesTarget} />
+              {data?.families.map((f, i) => (
+                <Card
+                  key={f.name}
+                  family={f}
+                  older={older}
+                  showBeta={beta}
+                  ctx={ctx}
+                  onShowDevices={setDevicesTarget}
+                  tourId={i === 0 ? "tour-supported-devices" : undefined}
+                />
               ))}
             </section>
 
@@ -519,7 +527,17 @@ export function VersionsApp() {
       {tip.bubble}
 
       {tourActive && (
-        <Tour settings={settings} panelOpen={panelOpen} setPanelOpen={setPanelOpen} setLift={setLift} tip={tip} onEnd={endTour} />
+        <Tour
+          settings={settings}
+          tab={tab}
+          setTab={setTab}
+          signedIn={!!isSignedIn}
+          panelOpen={panelOpen}
+          setPanelOpen={setPanelOpen}
+          setLift={setLift}
+          tip={tip}
+          onEnd={endTour}
+        />
       )}
     </>
   );
